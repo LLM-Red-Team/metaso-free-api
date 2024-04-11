@@ -14,7 +14,7 @@
 Moonshot AI（Kimi.ai）接口转API [kimi-free-api](https://github.com/LLM-Red-Team/kimi-free-api)
 
 阶跃星辰 (跃问StepChat) 接口转API [step-free-api](https://github.com/LLM-Red-Team/step-free-api)
-
+g
 ZhipuAI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Team/glm-free-api)
 
 阿里通义 (Qwen) 接口转API [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)
@@ -62,7 +62,7 @@ ZhipuAI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Te
 
 此链接仅临时测试功能，只有一路并发，如果遇到异常请稍后重试，建议自行部署使用。
 
-https://udify.app/chat/Pe89TtaX3rKXM8NS
+https://udify.app/chat/46rRHl5xoVa4m1lo
 
 ## 测试接口
 
