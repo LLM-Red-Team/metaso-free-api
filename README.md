@@ -70,7 +70,7 @@ https://metaso-free-api-j93o.onrender.com
 
 ## 效果示例
 
-### 三种搜索模式
+### 三种搜索模式（简洁、深入、研究）
 
 ![简洁和深入搜索模式](./doc/example-1.png)
 
