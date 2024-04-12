@@ -43,10 +43,7 @@ ZhipuAI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Te
 * [原生部署](#原生部署)
 * [接口列表](#接口列表)
   * [对话补全](#对话补全)
-  * [AI绘图](#AI绘图)
-  * [文档解读](#文档解读)
-  * [图像解析](#图像解析)
-  * [refresh_token存活检测](#refresh_token存活检测)
+  * [token存活检测](#token存活检测)
 * [注意事项](#注意事项)
   * [Nginx反代优化](#Nginx反代优化)
 
@@ -267,6 +264,26 @@ Authorization: Bearer [refresh_token]
         "total_tokens": 2
     },
     "created": 1712859314
+}
+```
+
+### token存活检测
+
+检测token是否存活，如果存活live未true，否则为false，请不要频繁（小于10分钟）调用此接口。
+
+**POST /token/check**
+
+请求数据：
+```json
+{
+    "token": "65e91a6b2bac5b600dd8526a-5e7acc465b114236a8d9de26c9f41846"
+}
+```
+
+响应数据：
+```json
+{
+    "live": true
 }
 ```
 
