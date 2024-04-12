@@ -5,7 +5,7 @@
 ![](https://img.shields.io/github/forks/llm-red-team/metaso-free-api.svg)
 ![](https://img.shields.io/docker/pulls/vinlic/metaso-free-api.svg)
 
-支持高速流式输出、支持多轮对话、支持联网搜索，零配置部署，多路token支持，自动清理会话痕迹。
+支持高速流式输出、支持多轮对话、支持联网搜索，零配置部署，多路token支持。
 
 与ChatGPT接口完全兼容。
 
@@ -14,7 +14,7 @@
 Moonshot AI（Kimi.ai）接口转API [kimi-free-api](https://github.com/LLM-Red-Team/kimi-free-api)
 
 阶跃星辰 (跃问StepChat) 接口转API [step-free-api](https://github.com/LLM-Red-Team/step-free-api)
-g
+
 ZhipuAI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Team/glm-free-api)
 
 阿里通义 (Qwen) 接口转API [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)
@@ -60,7 +60,7 @@ ZhipuAI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Te
 
 ## 在线体验
 
-此链接仅临时测试功能，只有一路并发，如果遇到异常请稍后重试，建议自行部署使用。
+此链接仅临时测试功能，如果遇到异常请稍后重试，建议自行部署使用。
 
 https://udify.app/chat/46rRHl5xoVa4m1lo
 
@@ -82,7 +82,9 @@ https://metaso-free-api-ij4o.onrender.com
 
 ### 多账号接入
 
-目前似乎限制同个账号同时只能有*一路*输出，你可以通过提供多个账号的uid-sid并使用`,`拼接提供：
+**注意：目前怀疑秘塔对IP地址的总搜索次数有限制，建议加入IP轮换**
+
+你可以通过提供多个账号的uid-sid并使用`,`拼接提供：
 
 `Authorization: Bearer uid-sid1,uid-sid2,uid-sid3`
 
