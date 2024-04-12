@@ -303,6 +303,15 @@ function messagesPrepare(model: string, messages: any[], tempature: number) {
 }
 
 /**
+ * 去除内容的索引标签
+ * 
+ * @param content 内容
+ */
+function removeIndexLabel(content: string) {
+  return content.replace(/\[\[\d+\]\]/g, '');
+}
+
+/**
  * 检查请求结果
  *
  * @param result 结果
@@ -347,7 +356,7 @@ async function receiveStream(model: string, convId: string, stream: any) {
         if (_.isError(result))
           throw new Error(`Stream response invalid: ${event.data}`);
         if (result.type == "append-text")
-          data.choices[0].message.content += result.text;
+          data.choices[0].message.content += removeIndexLabel(result.text);
       } catch (err) {
         logger.error(err);
         reject(err);
@@ -431,7 +440,7 @@ function createTransStream(
           choices: [
             {
               index: 0,
-              delta: { content: result.text },
+              delta: { content: removeIndexLabel(result.text) },
               finish_reason: null,
             },
           ],
