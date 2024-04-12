@@ -68,7 +68,7 @@ https://udify.app/chat/46rRHl5xoVa4m1lo
 
 此接口实例部署在[Render](#Render部署)上面，遇到容器回收可能导致响应速度较慢，仅供测试，建议自行部署。
 
-https://metaso-free-api-ij4o.onrender.com
+https://metaso-free-api-j93o.onrender.com
 
 ## 接入准备
 
