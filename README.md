@@ -80,6 +80,8 @@ https://metaso-free-api-j93o.onrender.com
 
 这将作为Authorization的Bearer Token值：`Authorization: Bearer uid-sid`
 
+![获取uid-sid](./doc/example-0.png)
+
 ### 多账号接入
 
 **注意：目前怀疑秘塔对IP地址的总搜索次数有限制，建议加入IP轮换**
@@ -229,6 +231,8 @@ Authorization: Bearer [refresh_token]
 ```json
 {
     // 简洁：concise / 深入：detail / 研究：research
+    // 乱填的话，可以通过tempature参数来控制：简洁：< 0.4 / 深入：>= 0.4 && < 0.7 / 研究：>= 0.7
+    // 乱填的话，还可以通过指令来控制：简洁：简洁搜索：小米su7 / 深入：深入搜索小米su7 / 研究：研究搜索小米su7
     "model": "concise",
     "messages": [
         {
