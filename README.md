@@ -33,6 +33,7 @@ ZhipuAI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Te
 
 * [声明](#声明)
 * [在线体验](#在线体验)
+* [测试接口](#测试接口)
 * [效果示例](#效果示例)
 * [接入准备](#接入准备)
   * [多账号接入](#多账号接入)
@@ -66,6 +67,18 @@ https://udify.app/chat/46rRHl5xoVa4m1lo
 此接口实例部署在[Render](#Render部署)上面，遇到容器回收可能导致响应速度较慢，仅供测试，建议自行部署。
 
 https://metaso-free-api-j93o.onrender.com
+
+## 效果示例
+
+### 三种搜索模式
+
+![简洁和深入搜索模式](./doc/example-1.png)
+
+![研究搜索模式](./doc/example-2.png)
+
+### Dify工作流妙用
+
+![Dify工作流妙用](./doc/example-3.png)
 
 ## 接入准备
 
@@ -230,6 +243,7 @@ Authorization: Bearer [token]
     // 简洁：concise / 深入：detail / 研究：research
     // 乱填的话，可以通过tempature参数来控制：简洁：< 0.4 / 深入：>= 0.4 && < 0.7 / 研究：>= 0.7
     // 乱填的话，还可以通过消息内容包含指令来控制：简洁：简洁搜索：小米su7 / 深入：深入搜索小米su7 / 研究：研究搜索小米su7
+    // 优先级：model > 消息内容指令 > tempature
     "model": "concise",
     "messages": [
         {
