@@ -221,7 +221,7 @@ pm2 stop metaso-free-api
 header 需要设置 Authorization 头部：
 
 ```
-Authorization: Bearer [refresh_token]
+Authorization: Bearer [token]
 ```
 
 请求数据：
