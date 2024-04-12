@@ -13,7 +13,7 @@ import util from "@/lib/util.ts";
 // 模型名称
 const MODEL_NAME = "detail";
 // 最大重试次数
-const MAX_RETRY_COUNT = 0;
+const MAX_RETRY_COUNT = 3;
 // 重试延迟
 const RETRY_DELAY = 5000;
 // 伪装headers
