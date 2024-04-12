@@ -11,7 +11,7 @@ import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
 
 // 模型名称
-const MODEL_NAME = "concise";
+const MODEL_NAME = "detail";
 // 最大重试次数
 const MAX_RETRY_COUNT = 0;
 // 重试延迟
@@ -89,7 +89,7 @@ function generateCookie(token: string) {
  *
  * @param token 认证Token
  */
-async function createConversation(model: string, name: string, token: string) {
+async function createConversation(name: string, token: string) {
   const metaToken = await acquireMetaToken(token);
   const result = await axios.post(
     "https://metaso.cn/api/session",
@@ -130,22 +130,24 @@ async function createCompletion(
   model = MODEL_NAME,
   messages: any[],
   token: string,
-  useSearch = true,
+  tempature = 0.6,
   retryCount = 0
 ) {
   return (async () => {
     logger.info(messages);
 
-    if (!["concise", "detail", "research"].includes(model)) model = MODEL_NAME;
-
     // 创建会话
-    const convId = await createConversation(model, "新会话", token);
+    const convId = await createConversation("新会话", token);
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
-    const content = messagesPrepare(messages);
+    const {
+      model: _model,
+      content
+    } = messagesPrepare(model, messages, tempature);
+
     const result = await axios.get(
-      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${model}&is-mini-webview=0&token=${metaToken}`,
+      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
       {
         headers: {
           Cookie: generateCookie(token),
@@ -177,7 +179,7 @@ async function createCompletion(
           model,
           messages,
           token,
-          useSearch,
+          tempature,
           retryCount + 1
         );
       })();
@@ -199,22 +201,23 @@ async function createCompletionStream(
   model = MODEL_NAME,
   messages: any[],
   token: string,
-  useSearch = true,
+  tempature = 0.6,
   retryCount = 0
 ) {
   return (async () => {
     logger.info(messages);
-    
-    if (!["concise", "detail", "research"].includes(model)) model = MODEL_NAME;
 
     // 创建会话
-    const convId = await createConversation(model, "新会话", token);
+    const convId = await createConversation("新会话", token);
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
-    const content = messagesPrepare(messages);
+    const {
+      model: _model,
+      content
+    } = messagesPrepare(model, messages, tempature);
     const result = await axios.get(
-      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${model}&is-mini-webview=0&token=${metaToken}`,
+      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
       {
         headers: {
           Cookie: generateCookie(token),
@@ -244,7 +247,7 @@ async function createCompletionStream(
           model,
           messages,
           token,
-          useSearch,
+          tempature,
           retryCount + 1
         );
       })();
@@ -258,12 +261,45 @@ async function createCompletionStream(
  * 
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
  */
-function messagesPrepare(messages: any[]) {
+function messagesPrepare(model: string, messages: any[], tempature: number) {
   let latestMessage = messages[messages.length - 1];
   if(!latestMessage)
     throw new APIException(EX.API_TEST);
-  logger.info("\n搜索内容：\n" + latestMessage.content);
-  return encodeURIComponent(latestMessage.content);
+  let content = latestMessage.content;
+  // 如果模型名称未遵守预设则检查指令是否存在，如果都没有再以温度为准
+  if (!["concise", "detail", "research"].includes(model)) {
+    if(content.indexOf('简洁搜索') != -1) {
+      model = "concise";
+      content = content.replace(/简洁搜索[:|：]?/g, '');
+    }
+    else if(content.indexOf('深入搜索') != -1) {
+      model = "detail";
+      content = content.replace(/深入搜索[:|：]?/g, '');
+    }
+    else if(content.indexOf('研究搜索') != -1) {
+      model = "research";
+      content = content.replace(/研究搜索[:|：]?/g, '');
+    }
+    else {
+      if(tempature < 0.4)
+        model = "concise";
+      else if(tempature >= 0.4 && tempature < 0.7)
+        model = "detail";
+      else if(tempature >= 0.7)
+        model = "research";
+      else
+        model = MODEL_NAME;
+    }
+  }
+  logger.info(`\n选用模式：${({
+    'concise': '简洁',
+    'detail': '深入',
+    'research': '研究'
+  })[model]}\n搜索内容：${content}`);
+  return {
+    model,
+    content: encodeURIComponent(content)
+  };
 }
 
 /**
