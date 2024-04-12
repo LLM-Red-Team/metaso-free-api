@@ -79,7 +79,7 @@ async function acquireMetaToken(token: string) {
  */
 function generateCookie(token: string) {
   const [uid, sid] = token.split("-");
-  return `uid=${uid}; sid=${sid}`;
+  return `uid=${uid}; sid=${sid}; `;
 }
 
 /**
@@ -479,7 +479,29 @@ function tokenSplit(authorization: string) {
  * 获取Token存活状态
  */
 async function getTokenLiveStatus(token: string) {
-  return false
+  const result = await axios.get(
+    "https://metaso.cn/api/my-info",
+    {
+      headers: {
+        Cookie: generateCookie(token),
+        "Is-Mini-Webview": "0",
+        ...FAKE_HEADERS,
+      },
+      timeout: 15000,
+      validateStatus: () => true,
+    }
+  );
+  
+  try {
+    const {
+      data: { user },
+    } = checkResult(result);
+    return !!user;
+  }
+  catch(err) {
+    console.log(err);
+    return false;
+  }
 }
 
 export default {

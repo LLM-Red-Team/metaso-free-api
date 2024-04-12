@@ -74,7 +74,7 @@ https://metaso-free-api-j93o.onrender.com
 
 从 [秘塔AI搜索](https://metaso.cn/) 获取`uid`和`sid`并使用`-`拼接：
 
-进入秘塔AI搜索随便发起一个对话，然后F12打开开发者工具，从Application > Cookies中找到`uid`和`sid`的值。
+进入秘塔AI搜索，登录账号（**必须登录账号，否则可能遭遇奇怪的限制**），然后F12打开开发者工具，从Application > Cookies中找到`uid`和`sid`的值。
 
 将uid和sid拼接：`uid-sid`，如 `65e91a6b2bac5b600dd8526a-5e7acc465b114236a8d9de26c9f41846`。
 
