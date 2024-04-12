@@ -7,5 +7,6 @@ export default {
     API_FILE_EXECEEDS_SIZE: [-2004, '远程文件超出大小'],
     API_CHAT_STREAM_PUSHING: [-2005, '已有对话流正在输出'],
     API_CONTENT_FILTERED: [-2006, '内容由于合规问题已被阻止生成'],
-    API_IMAGE_GENERATION_FAILED: [-2007, '图像生成失败']
+    API_IMAGE_GENERATION_FAILED: [-2007, '图像生成失败'],
+    API_CONTENT_EMPTY: [-2008, '消息不能为空']
 }

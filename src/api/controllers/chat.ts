@@ -143,10 +143,9 @@ async function createCompletion(
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
+    const content = messagesPrepare(messages);
     const result = await axios.get(
-      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${messagesPrepare(
-        messages
-      )}&lang=zh&mode=${model}&is-mini-webview=0&token=${metaToken}`,
+      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${model}&is-mini-webview=0&token=${metaToken}`,
       {
         headers: {
           Cookie: generateCookie(token),
@@ -213,10 +212,9 @@ async function createCompletionStream(
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
+    const content = messagesPrepare(messages);
     const result = await axios.get(
-      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${messagesPrepare(
-        messages
-      )}&lang=zh&mode=${model}&is-mini-webview=0&token=${metaToken}`,
+      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${model}&is-mini-webview=0&token=${metaToken}`,
       {
         headers: {
           Cookie: generateCookie(token),
@@ -257,52 +255,15 @@ async function createCompletionStream(
 
 /**
  * 消息预处理
- *
- * 由于接口只取第一条消息，此处会将多条消息合并为一条，实现多轮对话效果
- * user:旧消息1
- * assistant:旧消息2
- * user:新消息
- *
+ * 
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
  */
 function messagesPrepare(messages: any[]) {
-  // 注入消息提升注意力
   let latestMessage = messages[messages.length - 1];
-  let hasFileOrImage =
-    Array.isArray(latestMessage.content) &&
-    latestMessage.content.some(
-      (v) => typeof v === "object" && ["file", "image_url"].includes(v["type"])
-    );
-  // 第二轮开始注入system prompt
-  if (messages.length > 2) {
-    if (hasFileOrImage) {
-      let newFileMessage = {
-        content: "关注用户最新发送文件和消息",
-        role: "system",
-      };
-      messages.splice(messages.length - 1, 0, newFileMessage);
-      logger.info("注入提升尾部文件注意力system prompt");
-    } else {
-      let newTextMessage = {
-        content: "关注用户最新的消息",
-        role: "system",
-      };
-      messages.splice(messages.length - 1, 0, newTextMessage);
-      logger.info("注入提升尾部消息注意力system prompt");
-    }
-  }
-
-  const content = messages.reduce((content, message) => {
-    if (Array.isArray(message.content)) {
-      return message.content.reduce((_content, v) => {
-        if (!_.isObject(v) || v["type"] != "text") return _content;
-        return _content + `${message.role || "user"}:${v["text"] || ""}\n`;
-      }, content);
-    }
-    return (content += `${message.role || "user"}:${message.content}\n`);
-  }, "");
-  logger.info("\n对话合并：\n" + content);
-  return content;
+  if(!latestMessage)
+    throw new APIException(EX.API_TEST);
+  logger.info("\n搜索内容：\n" + latestMessage.content);
+  return encodeURIComponent(latestMessage.content);
 }
 
 /**
