@@ -1,6 +1,6 @@
 {
   "name": "metaso-free-api",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Metaso AI Free API Server",
   "type": "module",
   "main": "dist/index.js",
