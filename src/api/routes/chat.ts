@@ -3,7 +3,7 @@ import _ from 'lodash';
 import Request from '@/lib/request/Request.ts';
 import Response from '@/lib/response/Response.ts';
 import chat from '@/api/controllers/chat.ts';
-import logger from '@/lib/logger.ts';
+import util from '@/lib/util.ts';
 
 export default {
 
@@ -30,7 +30,19 @@ export default {
                     });
                 }
                 catch(err) {
-                    return new Response(Buffer.from(`data: ${err.message}\n\ndata: [DONE]\n\n`), {
+                    return new Response(Buffer.from(`data: ${JSON.stringify({
+                        id: "",
+                        model,
+                        object: "chat.completion.chunk",
+                        choices: [
+                          {
+                            index: 0,
+                            delta: { role: "assistant", content: err.message },
+                            finish_reason: "stop",
+                          },
+                        ],
+                        created: util.unixTimestamp(),
+                      })}\n\ndata: [DONE]\n\n`), {
                         type: "text/event-stream"
                     });
                 }
