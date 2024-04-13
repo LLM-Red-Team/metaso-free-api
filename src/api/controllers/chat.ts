@@ -32,14 +32,6 @@ const FAKE_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 };
-// 文件最大大小
-const FILE_MAX_SIZE = 100 * 1024 * 1024;
-// access_token映射
-const accessTokenMap = new Map();
-
-// 先从页面爬取meta-token
-// 需要提供sid和uid
-// 使用sid和uid cookie+url编码的meta-token调用流
 
 /**
  * 获取meta-token
@@ -89,7 +81,7 @@ function generateCookie(token: string) {
  *
  * @param token 认证Token
  */
-async function createConversation(name: string, token: string) {
+async function createConversation(name: string, engineType: string, token: string) {
   const metaToken = await acquireMetaToken(token);
   const result = await axios.post(
     "https://metaso.cn/api/session",
@@ -97,7 +89,7 @@ async function createConversation(name: string, token: string) {
       question: name,
       // 创建简洁版本，绕过次数限制
       mode: "concise",
-      engineType: "",
+      engineType,
       scholarSearchDomain: "all",
     },
     {
@@ -136,16 +128,17 @@ async function createCompletion(
   return (async () => {
     logger.info(messages);
 
+    const {
+      model: _model,
+      content,
+      engineType
+    } = messagesPrepare(model, messages, tempature);
+
     // 创建会话
-    const convId = await createConversation("新会话", token);
+    const convId = await createConversation("新会话", engineType, token);
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
-    const {
-      model: _model,
-      content
-    } = messagesPrepare(model, messages, tempature);
-
     const result = await axios.get(
       `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
       {
@@ -207,15 +200,17 @@ async function createCompletionStream(
   return (async () => {
     logger.info(messages);
 
+    const {
+      model: _model,
+      content,
+      engineType
+    } = messagesPrepare(model, messages, tempature);
+
     // 创建会话
-    const convId = await createConversation("新会话", token);
+    const convId = await createConversation("新会话", engineType, token);
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
-    const {
-      model: _model,
-      content
-    } = messagesPrepare(model, messages, tempature);
     const result = await axios.get(
       `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
       {
@@ -263,41 +258,49 @@ async function createCompletionStream(
  */
 function messagesPrepare(model: string, messages: any[], tempature: number) {
   let latestMessage = messages[messages.length - 1];
-  if(!latestMessage)
+  if (!latestMessage)
     throw new APIException(EX.API_TEST);
   let content = latestMessage.content;
+  let engineType = "";
+  ([model, engineType = ""] = model.split('-'));
   // 如果模型名称未遵守预设则检查指令是否存在，如果都没有再以温度为准
-  if (!["concise", "detail", "research"].includes(model)) {
-    if(content.indexOf('简洁搜索') != -1) {
+  if (!["concise", "detail", "research", "concise"].includes(model)) {
+    if (content.indexOf('简洁搜索') != -1) {
       model = "concise";
       content = content.replace(/简洁搜索[:|：]?/g, '');
     }
-    else if(content.indexOf('深入搜索') != -1) {
+    else if (content.indexOf('深入搜索') != -1) {
       model = "detail";
       content = content.replace(/深入搜索[:|：]?/g, '');
     }
-    else if(content.indexOf('研究搜索') != -1) {
+    else if (content.indexOf('研究搜索') != -1) {
       model = "research";
       content = content.replace(/研究搜索[:|：]?/g, '');
     }
     else {
-      if(tempature < 0.4)
+      if (tempature < 0.4)
         model = "concise";
-      else if(tempature >= 0.4 && tempature < 0.7)
+      else if (tempature >= 0.4 && tempature < 0.7)
         model = "detail";
-      else if(tempature >= 0.7)
+      else if (tempature >= 0.7)
         model = "research";
       else
         model = MODEL_NAME;
     }
   }
+  if (/^学术/.test(content)) {
+    engineType = "scholar";
+    content = content.replace(/^学术/, '');
+  }
+  const isScholar = engineType == "scholar";
   logger.info(`\n选用模式：${({
-    'concise': '简洁',
-    'detail': '深入',
-    'research': '研究'
+    'concise': isScholar ? '学术-简洁' : '简洁',
+    'detail': isScholar ? '学术-深入' : '深入',
+    'research': isScholar ? '学术-研究' : '研究'
   })[model]}\n搜索内容：${content}`);
   return {
     model,
+    engineType,
     content: encodeURIComponent(content)
   };
 }
@@ -320,7 +323,7 @@ function checkResult(result: AxiosResponse) {
   if (!result.data) return null;
   const { errCode, errMsg } = result.data;
   if (!_.isFinite(errCode) || errCode == 0) return result.data;
-  throw new APIException(EX.API_REQUEST_FAILED, `[请求metaso失败]: ${errMsg}`);
+  throw new APIException(EX.API_REQUEST_FAILED, errMsg);
 }
 
 /**
@@ -491,14 +494,14 @@ async function getTokenLiveStatus(token: string) {
       validateStatus: () => true,
     }
   );
-  
+
   try {
     const {
       data: { user },
     } = checkResult(result);
     return !!user;
   }
-  catch(err) {
+  catch (err) {
     console.log(err);
     return false;
   }

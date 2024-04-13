@@ -5,7 +5,7 @@
 ![](https://img.shields.io/github/forks/llm-red-team/metaso-free-api.svg)
 ![](https://img.shields.io/docker/pulls/vinlic/metaso-free-api.svg)
 
-支持高速流式输出、支持秘塔AI超强联网搜索，零配置部署，多路token支持。
+支持高速流式输出、支持秘塔AI超强联网搜索（全网和学术以及简洁、深入、研究三种模式），零配置部署，多路token支持。
 
 与ChatGPT接口完全兼容。
 
@@ -84,7 +84,7 @@ https://metaso-free-api-j93o.onrender.com
 
 从 [秘塔AI搜索](https://metaso.cn/) 获取`uid`和`sid`并使用`-`拼接：
 
-进入秘塔AI搜索，登录账号（**必须登录账号，否则可能遭遇奇怪的限制**），然后F12打开开发者工具，从Application > Cookies中找到`uid`和`sid`的值。
+进入秘塔AI搜索，登录账号（**建议登录账号，否则可能遭遇奇怪的限制**），然后F12打开开发者工具，从Application > Cookies中找到`uid`和`sid`的值。
 
 将uid和sid拼接：`uid-sid`，如 `65e91a6b2bac5b600dd8526a-5e7acc465b114236a8d9de26c9f41846`。
 
@@ -240,9 +240,12 @@ Authorization: Bearer [token]
 请求数据：
 ```json
 {
-    // 简洁：concise / 深入：detail / 研究：research
-    // 乱填的话，可以通过tempature参数来控制：简洁：< 0.4 / 深入：>= 0.4 && < 0.7 / 研究：>= 0.7
-    // 乱填的话，还可以通过消息内容包含指令来控制：简洁：简洁搜索：小米su7 / 深入：深入搜索小米su7 / 研究：研究搜索小米su7
+    // 全网model名称支持 -> 简洁：concise / 深入：detail / 研究：research
+    // 学术model名称支持 -> 学术-简洁：concise-scholar / 学术-深入：detail-scholar / 学术-研究：research-scholar
+    // model乱填的话，可以通过tempature参数来控制（但不支持学术）：简洁：< 0.4 / 深入：>= 0.4 && < 0.7 / 研究：>= 0.7
+    // model乱填的话，还可以通过消息内容包含指令来控制：↓↓↓
+    // 简洁 -> 简洁搜索小米su7 / 深入 -> 深入搜索小米su7 / 研究 -> 研究搜索小米su7
+    // 学术-简洁 -> 学术简洁搜索：小米su7 / 学术-深入 -> 学术深入搜索小米su7 / 学术研究 -> 学术研究搜索小米su7
     // 优先级：model > 消息内容指令 > tempature
     "model": "concise",
     "messages": [
