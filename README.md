@@ -5,7 +5,7 @@
 ![](https://img.shields.io/github/forks/llm-red-team/metaso-free-api.svg)
 ![](https://img.shields.io/docker/pulls/vinlic/metaso-free-api.svg)
 
-支持高速流式输出、支持秘塔AI超强联网搜索（全网和学术以及简洁、深入、研究三种模式），零配置部署，多路token支持。
+支持高速流式输出、支持秘塔AI超强联网搜索（全网or学术以及简洁、深入、研究三种模式），零配置部署，多路token支持。
 
 与ChatGPT接口完全兼容。
 
