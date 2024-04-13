@@ -23,10 +23,17 @@ export default {
             const token = _.sample(tokens);
             const { model, messages, stream, tempature } = request.body;;
             if (stream) {
-                const stream = await chat.createCompletionStream(model, messages, token, tempature);
-                return new Response(stream, {
-                    type: "text/event-stream"
-                });
+                try {
+                    const stream = await chat.createCompletionStream(model, messages, token, tempature);
+                    return new Response(stream, {
+                        type: "text/event-stream"
+                    });
+                }
+                catch(err) {
+                    return new Response(Buffer.from(`data: ${err.message}\n\ndata: [DONE]\n\n`), {
+                        type: "text/event-stream"
+                    });
+                }
             }
             else
                 return await chat.createCompletion(model, messages, token, tempature);
