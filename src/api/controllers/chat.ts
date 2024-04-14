@@ -211,6 +211,7 @@ async function createCompletionStream(
 
     // 请求流
     const metaToken = await acquireMetaToken(token);
+    
     const result = await axios.get(
       `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
       {
@@ -292,6 +293,8 @@ function messagesPrepare(model: string, messages: any[], tempature: number) {
     engineType = "scholar";
     content = content.replace(/^学术/, '');
   }
+  if(engineType && !["scholar"].includes(engineType))
+    engineType = "";
   const isScholar = engineType == "scholar";
   logger.info(`\n选用模式：${({
     'concise': isScholar ? '学术-简洁' : '简洁',
@@ -360,6 +363,8 @@ async function receiveStream(model: string, convId: string, stream: any) {
           throw new Error(`Stream response invalid: ${event.data}`);
         if (result.type == "append-text")
           data.choices[0].message.content += removeIndexLabel(result.text);
+        else if (result.type == "error")
+          data.choices[0].message.content += `[${result.code}]${result.msg}`;
       } catch (err) {
         logger.error(err);
         reject(err);
@@ -443,13 +448,31 @@ function createTransStream(
           choices: [
             {
               index: 0,
-              delta: { content: removeIndexLabel(result.text) },
+              delta: { role: "assistant", content: removeIndexLabel(result.text) },
               finish_reason: null,
             },
           ],
           created,
         })}\n\n`;
         !transStream.closed && transStream.write(data);
+      }
+      else if (result.type == "error") {
+        const data = `data: ${JSON.stringify({
+          id: convId,
+          model,
+          object: "chat.completion.chunk",
+          choices: [
+            {
+              index: 0,
+              delta: { role: "assistant", content: `[${result.code}]${result.msg}` },
+              finish_reason: null,
+            },
+          ],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+          created,
+        })}\n\n`;
+        !transStream.closed && transStream.write(data);
+        return;
       }
     } catch (err) {
       logger.error(err);
