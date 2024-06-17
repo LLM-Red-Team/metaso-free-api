@@ -364,7 +364,7 @@ async function receiveStream(model: string, convId: string, stream: any) {
         if (result.type == "append-text")
           data.choices[0].message.content += removeIndexLabel(result.text);
         else if (result.type == "set-reference")
-          data.choices[0].message.content += `${result.list}.reduce((acc, cur) => acc + JSON.stringify(cur), "")`;
+          data.choices[0].message.content += result.list.toString();
         else if (result.type == "error")
           data.choices[0].message.content += `[${result.code}]${result.msg}`;
       } catch (err) {
@@ -466,7 +466,7 @@ function createTransStream(
           choices: [
             {
               index: 0,
-              delta: { role: "assistant", content: `${result.list}.reduce((acc, cur) => acc + JSON.stringify(cur), "")` },
+              delta: { role: "assistant", content: result.list.toString() },
               finish_reason: null,
             },
           ],
