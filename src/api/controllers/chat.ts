@@ -363,6 +363,8 @@ async function receiveStream(model: string, convId: string, stream: any) {
           throw new Error(`Stream response invalid: ${event.data}`);
         if (result.type == "append-text")
           data.choices[0].message.content += removeIndexLabel(result.text);
+        else if (result.type == "set-reference")
+          data.choices[0].message.content += `${result.list}.reduce((acc, cur) => acc + JSON.stringify(cur), "")`;
         else if (result.type == "error")
           data.choices[0].message.content += `[${result.code}]${result.msg}`;
       } catch (err) {
@@ -449,6 +451,22 @@ function createTransStream(
             {
               index: 0,
               delta: { role: "assistant", content: removeIndexLabel(result.text) },
+              finish_reason: null,
+            },
+          ],
+          created,
+        })}\n\n`;
+        !transStream.closed && transStream.write(data);
+      }
+      else if (result.type == "set-reference") {
+        const data = `data: ${JSON.stringify({
+          id: convId,
+          model,
+          object: "chat.completion.chunk",
+          choices: [
+            {
+              index: 0,
+              delta: { role: "assistant", content: `${result.list}.reduce((acc, cur) => acc + JSON.stringify(cur), "")` },
               finish_reason: null,
             },
           ],
