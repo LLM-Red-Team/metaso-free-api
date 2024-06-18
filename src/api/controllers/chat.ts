@@ -362,7 +362,7 @@ async function receiveStream(model: string, convId: string, stream: any) {
         if (_.isError(result))
           throw new Error(`Stream response invalid: ${event.data}`);
         if (result.type == "append-text")
-          data.choices[0].message.content += removeIndexLabel(result.text);
+          data.choices[0].message.content += result.text;
         else if (result.type == "set-reference")
           data.choices[0].message.content += '《REFERENCE_START[' + result.list.map(item => JSON.stringify(item)).join(', ') + ']REFERENCE_END》';
         else if (result.type == "update-reference")
@@ -452,7 +452,7 @@ function createTransStream(
           choices: [
             {
               index: 0,
-              delta: { role: "assistant", content: removeIndexLabel(result.text) },
+              delta: { role: "assistant", content: result.text },
               finish_reason: null,
             },
           ],
