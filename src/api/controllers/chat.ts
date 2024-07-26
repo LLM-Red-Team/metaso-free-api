@@ -38,8 +38,8 @@ const FAKE_HEADERS = {
  *
  * @param token 认证Token
  */
-async function acquireMetaToken(token: string) {
-  const result = await axios.get("https://metaso.cn/", {
+async function acquireMetaToken(token: string, swapToken = false) {
+  const result = await axios.get('https://metaso.cn/', {
     headers: {
       ...FAKE_HEADERS,
       "Sec-Fetch-Dest": "document",
@@ -56,12 +56,27 @@ async function acquireMetaToken(token: string) {
     result.headers["content-type"].indexOf("text/html") == -1
   )
     throw new APIException(EX.API_REQUEST_FAILED, result.data);
-  const regex = /<meta id="meta-token" content="([^"]*)"/;
-  const match = result.data.match(regex);
+  let regex = /<meta id="meta-token" content="([^"]*)"/;
+  let match = result.data.match(regex);
   if (!match || !match[1])
     throw new APIException(EX.API_REQUEST_FAILED, "meta-token not found");
-  const metaToken = match[1];
-  return encodeURIComponent(metaToken);
+  let metaToken = match[1];
+  if (swapToken) {
+    regex = /<script id="gs">\n*\s*window\.tMixPos\s*=\s*(\d+);\n*\s*<\/script>/;
+    match = result.data.match(regex);
+    if (!match || !match[1])
+      throw new APIException(EX.API_REQUEST_FAILED, "tMixPos not found");
+    const tMixOffset = parseInt(match[1]) / 65536 + 70;
+    var arr = metaToken.split("");
+    let temp = arr[tMixOffset];
+    arr[tMixOffset] = arr[tMixOffset + 1],
+      arr[tMixOffset + 1] = temp;
+    temp = arr[22];
+    arr[22] = arr[23];
+    arr[23] = temp;
+    metaToken = arr.join("");
+  }
+  return metaToken;
 }
 
 /**
@@ -81,14 +96,13 @@ function generateCookie(token: string) {
  *
  * @param token 认证Token
  */
-async function createConversation(name: string, engineType: string, token: string) {
+async function createConversation(name: string, model: string, engineType: string, token: string) {
   const metaToken = await acquireMetaToken(token);
   const result = await axios.post(
     "https://metaso.cn/api/session",
     {
       question: name,
-      // 创建简洁版本，绕过次数限制
-      mode: "concise",
+      mode: model,
       engineType,
       scholarSearchDomain: "all",
     },
@@ -135,13 +149,23 @@ async function createCompletion(
     } = messagesPrepare(model, messages, tempature);
 
     // 创建会话
-    const convId = await createConversation("新会话", engineType, token);
+    const convId = await createConversation(content, _model, engineType, token);
 
     // 请求流
-    const metaToken = await acquireMetaToken(token);
-    const result = await axios.get(
-      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
-      {
+    const metaToken = await acquireMetaToken(token, true);
+    const result = await axios.get(`https://metaso.cn/api/searchV2`, {
+        params: {
+          sessionId: convId,
+          question: content,
+          lang: 'zh',
+          mode: _model,
+          url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
+          enableMix: 'true',
+          scholarSearchDomain: 'all',
+          expectedCurrentSessionSearchCount: '1',
+          'is-mini-webview': '0',
+          token: metaToken
+        },
         headers: {
           Cookie: generateCookie(token),
           ...FAKE_HEADERS,
@@ -207,14 +231,23 @@ async function createCompletionStream(
     } = messagesPrepare(model, messages, tempature);
 
     // 创建会话
-    const convId = await createConversation("新会话", engineType, token);
+    const convId = await createConversation(content, _model, engineType, token);
 
     // 请求流
-    const metaToken = await acquireMetaToken(token);
-    
-    const result = await axios.get(
-      `https://metaso.cn/api/searchV2?sessionId=${convId}&question=${content}&lang=zh&mode=${_model}&is-mini-webview=0&token=${metaToken}`,
-      {
+    const metaToken = await acquireMetaToken(token, true);
+    const result = await axios.get(`https://metaso.cn/api/searchV2`, {
+        params: {
+          sessionId: convId,
+          question: content,
+          lang: 'zh',
+          mode: _model,
+          url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
+          enableMix: 'true',
+          scholarSearchDomain: 'all',
+          expectedCurrentSessionSearchCount: '1',
+          'is-mini-webview': '0',
+          token: metaToken
+        },
         headers: {
           Cookie: generateCookie(token),
           ...FAKE_HEADERS,
@@ -293,7 +326,7 @@ function messagesPrepare(model: string, messages: any[], tempature: number) {
     engineType = "scholar";
     content = content.replace(/^学术/, '');
   }
-  if(engineType && !["scholar"].includes(engineType))
+  if (engineType && !["scholar"].includes(engineType))
     engineType = "";
   const isScholar = engineType == "scholar";
   logger.info(`\n选用模式：${({
@@ -304,7 +337,7 @@ function messagesPrepare(model: string, messages: any[], tempature: number) {
   return {
     model,
     engineType,
-    content: encodeURIComponent(content)
+    content
   };
 }
 
