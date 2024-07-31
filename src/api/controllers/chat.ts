@@ -62,18 +62,18 @@ async function acquireMetaToken(token: string, swapToken = false) {
     throw new APIException(EX.API_REQUEST_FAILED, "meta-token not found");
   let metaToken = match[1];
   if (swapToken) {
-    regex = /<script id="gs">\n*\s*window\.tMixPos\s*=\s*(\d+);\n*\s*<\/script>/;
-    match = result.data.match(regex);
-    if (!match || !match[1])
-      throw new APIException(EX.API_REQUEST_FAILED, "tMixPos not found");
-    const tMixOffset = parseInt(match[1]) / 65536 + 70;
+    // regex = /<script id="gs">\n*\s*window\.tMixPos\s*=\s*(\d+);\n*\s*<\/script>/;
+    // match = result.data.match(regex);
+    // if (!match || !match[1])
+    //   throw new APIException(EX.API_REQUEST_FAILED, "tMixPos not found");
+    // const tMixOffset = parseInt(match[1]) / 65536 + 70;
     var arr = metaToken.split("");
-    let temp = arr[tMixOffset];
-    arr[tMixOffset] = arr[tMixOffset + 1],
-      arr[tMixOffset + 1] = temp;
-    temp = arr[22];
-    arr[22] = arr[23];
-    arr[23] = temp;
+    let temp = arr[78];
+    arr[78] = arr[79],
+      arr[79] = temp;
+    temp = arr[17];
+    arr[17] = arr[18];
+    arr[18] = temp;
     metaToken = arr.join("");
   }
   return metaToken;
