@@ -62,19 +62,27 @@ async function acquireMetaToken(token: string, swapToken = false) {
     throw new APIException(EX.API_REQUEST_FAILED, "meta-token not found");
   let metaToken = match[1];
   if (swapToken) {
-    // regex = /<script id="gs">\n*\s*window\.tMixPos\s*=\s*(\d+);\n*\s*<\/script>/;
-    // match = result.data.match(regex);
-    // if (!match || !match[1])
-    //   throw new APIException(EX.API_REQUEST_FAILED, "tMixPos not found");
-    // const tMixOffset = parseInt(match[1]) / 65536 + 70;
-    var arr = metaToken.split("");
-    let temp = arr[78];
-    arr[78] = arr[79],
-      arr[79] = temp;
-    temp = arr[17];
-    arr[17] = arr[18];
-    arr[18] = temp;
-    metaToken = arr.join("");
+    let regex = /<script src="(https:\/\/static.metaso.cn\/_next\/static\/chunks\/9553-\w+\.js)"/;
+    let match = result.data.match(regex);
+    if (!match || !match[1])
+      throw new APIException(EX.API_REQUEST_FAILED, "script url not found");
+    const scriptResult = await axios.get(match[1], {
+      headers: {
+        ...FAKE_HEADERS,
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        Cookie: generateCookie(token),
+      }
+    });
+    if (scriptResult.status != 200 || scriptResult.headers["content-type"].indexOf("application/javascript") == -1)
+      throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
+    regex = /function swap\(\w+\)\{.+?\}/;
+    match = scriptResult.data.match(regex);
+    if (!match)
+      throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
+    metaToken = Function(`return ${match[0]}`)()(metaToken);
   }
   return metaToken;
 }
@@ -154,28 +162,28 @@ async function createCompletion(
     // 请求流
     const metaToken = await acquireMetaToken(token, true);
     const result = await axios.get(`https://metaso.cn/api/searchV2`, {
-        params: {
-          sessionId: convId,
-          question: content,
-          lang: 'zh',
-          mode: _model,
-          url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
-          enableMix: 'true',
-          scholarSearchDomain: 'all',
-          expectedCurrentSessionSearchCount: '1',
-          'is-mini-webview': '0',
-          token: metaToken
-        },
-        headers: {
-          Cookie: generateCookie(token),
-          ...FAKE_HEADERS,
-          Accept: "text/event-stream",
-        },
-        // 300秒超时
-        timeout: 300000,
-        validateStatus: () => true,
-        responseType: "stream",
-      }
+      params: {
+        sessionId: convId,
+        question: content,
+        lang: 'zh',
+        mode: _model,
+        url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
+        enableMix: 'true',
+        scholarSearchDomain: 'all',
+        expectedCurrentSessionSearchCount: '1',
+        'is-mini-webview': '0',
+        token: metaToken
+      },
+      headers: {
+        Cookie: generateCookie(token),
+        ...FAKE_HEADERS,
+        Accept: "text/event-stream",
+      },
+      // 300秒超时
+      timeout: 300000,
+      validateStatus: () => true,
+      responseType: "stream",
+    }
     );
 
     const streamStartTime = util.timestamp();
@@ -236,28 +244,28 @@ async function createCompletionStream(
     // 请求流
     const metaToken = await acquireMetaToken(token, true);
     const result = await axios.get(`https://metaso.cn/api/searchV2`, {
-        params: {
-          sessionId: convId,
-          question: content,
-          lang: 'zh',
-          mode: _model,
-          url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
-          enableMix: 'true',
-          scholarSearchDomain: 'all',
-          expectedCurrentSessionSearchCount: '1',
-          'is-mini-webview': '0',
-          token: metaToken
-        },
-        headers: {
-          Cookie: generateCookie(token),
-          ...FAKE_HEADERS,
-          Accept: "text/event-stream",
-        },
-        // 300秒超时
-        timeout: 300000,
-        validateStatus: () => true,
-        responseType: "stream",
-      }
+      params: {
+        sessionId: convId,
+        question: content,
+        lang: 'zh',
+        mode: _model,
+        url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
+        enableMix: 'true',
+        scholarSearchDomain: 'all',
+        expectedCurrentSessionSearchCount: '1',
+        'is-mini-webview': '0',
+        token: metaToken
+      },
+      headers: {
+        Cookie: generateCookie(token),
+        ...FAKE_HEADERS,
+        Accept: "text/event-stream",
+      },
+      // 300秒超时
+      timeout: 300000,
+      validateStatus: () => true,
+      responseType: "stream",
+    }
     );
     const streamStartTime = util.timestamp();
     // 创建转换流将消息格式转换为gpt兼容格式
