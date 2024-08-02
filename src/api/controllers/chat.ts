@@ -1,7 +1,6 @@
 import { PassThrough } from "stream";
-import path from "path";
 import _ from "lodash";
-import mime from "mime";
+import { JSDOM } from "jsdom";
 import axios, { AxiosResponse } from "axios";
 
 import APIException from "@/lib/exceptions/APIException.ts";
@@ -51,13 +50,14 @@ async function acquireMetaToken(token: string, swapToken = false) {
     timeout: 15000,
     validateStatus: () => true,
   });
+  const html = result.data;
   if (
     result.status != 200 ||
     result.headers["content-type"].indexOf("text/html") == -1
   )
-    throw new APIException(EX.API_REQUEST_FAILED, result.data);
+    throw new APIException(EX.API_REQUEST_FAILED, html);
   let regex = /<meta id="meta-token" content="([^"]*)"/;
-  let match = result.data.match(regex);
+  let match = html.match(regex);
   if (!match || !match[1])
     throw new APIException(EX.API_REQUEST_FAILED, "meta-token not found");
   let metaToken = match[1];
@@ -82,7 +82,10 @@ async function acquireMetaToken(token: string, swapToken = false) {
     match = scriptResult.data.match(regex);
     if (!match)
       throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
-    metaToken = Function(`return ${match[0]}`)()(metaToken);
+    const dom = new JSDOM(html, {
+      url: "https://metaso.cn"
+    });
+    metaToken = Function('window', `const {${Object.keys(dom.window).filter(v => v != 'window' && !v.includes('-')).join(',')}} = window;return ${match[0]}`)(dom.window)(metaToken);
   }
   return metaToken;
 }

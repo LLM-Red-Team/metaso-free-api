@@ -20,6 +20,7 @@
   "author": "Vinlic",
   "license": "ISC",
   "dependencies": {
+    "@types/jsdom": "^21.1.7",
     "axios": "^1.6.7",
     "colors": "^1.4.0",
     "crc-32": "^1.2.2",
@@ -27,6 +28,7 @@
     "date-fns": "^3.3.1",
     "eventsource-parser": "^1.1.2",
     "fs-extra": "^11.2.0",
+    "jsdom": "^24.1.1",
     "koa": "^2.15.0",
     "koa-body": "^5.0.0",
     "koa-bodyparser": "^4.4.1",
