@@ -20,7 +20,6 @@
   "author": "Vinlic",
   "license": "ISC",
   "dependencies": {
-    "@types/jsdom": "^21.1.7",
     "axios": "^1.6.7",
     "colors": "^1.4.0",
     "crc-32": "^1.2.2",
@@ -45,6 +44,7 @@
   "devDependencies": {
     "@types/lodash": "^4.14.202",
     "@types/mime": "^3.0.4",
+    "@types/jsdom": "^21.1.7",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3"
   }
