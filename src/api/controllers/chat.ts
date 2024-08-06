@@ -50,7 +50,7 @@ async function acquireMetaToken(token: string, swapToken = false) {
     timeout: 15000,
     validateStatus: () => true,
   });
-  const html = result.data;
+  let html = result.data;
   if (
     result.status != 200 ||
     result.headers["content-type"].indexOf("text/html") == -1
@@ -82,8 +82,14 @@ async function acquireMetaToken(token: string, swapToken = false) {
     match = scriptResult.data.match(regex);
     if (!match)
       throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
+    const txLoginScriptResult = await axios.get('https://metaso.cn/txLogin.js');
+    if (txLoginScriptResult.status != 200 || txLoginScriptResult.headers["content-type"].indexOf("application/javascript") == -1)
+      throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
+    const txLoginScript = txLoginScriptResult.data;
+    html += `<script>${txLoginScript}</script>`;
     const dom = new JSDOM(html, {
-      url: "https://metaso.cn"
+      url: "https://metaso.cn",
+      runScripts: "dangerously"
     });
     metaToken = Function('window', `const {${Object.keys(dom.window).filter(v => v != 'window' && !v.includes('-')).join(',')}} = window;return ${match[0]}`)(dom.window)(metaToken);
   }
