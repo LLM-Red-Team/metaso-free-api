@@ -31,6 +31,8 @@ const FAKE_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 };
+// 是否启用Token交换
+let swapMode = false;
 
 /**
  * 获取meta-token
@@ -78,10 +80,11 @@ async function acquireMetaToken(token: string, swapToken = false) {
     });
     if (scriptResult.status != 200 || scriptResult.headers["content-type"].indexOf("application/javascript") == -1)
       throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
-    regex = /function swap\(\w+\)\{.+?\}/;
+    regex = /function (mix|swap)\(\w+\)\{.+?\}/;
     match = scriptResult.data.match(regex);
     if (!match)
       throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
+    const swapFunction = match[0];
     const txLoginScriptResult = await axios.get('https://metaso.cn/txLogin.js');
     if (txLoginScriptResult.status != 200 || txLoginScriptResult.headers["content-type"].indexOf("application/javascript") == -1)
       throw new APIException(EX.API_REQUEST_FAILED, "script invalid");
@@ -91,7 +94,7 @@ async function acquireMetaToken(token: string, swapToken = false) {
       url: "https://metaso.cn",
       runScripts: "dangerously"
     });
-    metaToken = Function('window', `const {${Object.keys(dom.window).filter(v => v != 'window' && !v.includes('-')).join(',')}} = window;return ${match[0]}`)(dom.window)(metaToken);
+    metaToken = Function('window', `const {${Object.keys(dom.window).filter(v => v != 'window' && !v.includes('-')).join(',')}} = window;return ${swapFunction}`)(dom.window)(metaToken);
   }
   return metaToken;
 }
@@ -169,7 +172,7 @@ async function createCompletion(
     const convId = await createConversation(content, _model, engineType, token);
 
     // 请求流
-    const metaToken = await acquireMetaToken(token, true);
+    const metaToken = await acquireMetaToken(token, swapMode);
     const result = await axios.get(`https://metaso.cn/api/searchV2`, {
       params: {
         sessionId: convId,
@@ -251,7 +254,7 @@ async function createCompletionStream(
     const convId = await createConversation(content, _model, engineType, token);
 
     // 请求流
-    const metaToken = await acquireMetaToken(token, true);
+    const metaToken = await acquireMetaToken(token, swapMode);
     const result = await axios.get(`https://metaso.cn/api/searchV2`, {
       params: {
         sessionId: convId,
@@ -409,8 +412,11 @@ async function receiveStream(model: string, convId: string, stream: any) {
         if (event.data == "[DONE]") return;
         // 解析JSON
         const result = _.attempt(() => JSON.parse(event.data));
-        if (_.isError(result))
+        if (_.isError(result)) {
+          if(event.data.indexOf('TOO_MANY_REQUESTS') != -1)
+            swapMode = !swapMode;
           throw new Error(`Stream response invalid: ${event.data}`);
+        }
         if (result.type == "append-text")
           data.choices[0].message.content += removeIndexLabel(result.text);
         else if (result.type == "error")
