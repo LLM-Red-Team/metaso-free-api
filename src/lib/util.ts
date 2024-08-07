@@ -249,9 +249,8 @@ const util = {
     const minutes = Math.floor((sec - hours * 3600) / 60);
     const seconds = sec - hours * 3600 - minutes * 60;
     const ms = (milliseconds % 60000) - seconds * 1000;
-    return `${hours > 9 ? hours : "0" + hours}:${
-      minutes > 9 ? minutes : "0" + minutes
-    }:${seconds > 9 ? seconds : "0" + seconds}.${ms}`;
+    return `${hours > 9 ? hours : "0" + hours}:${minutes > 9 ? minutes : "0" + minutes
+      }:${seconds > 9 ? seconds : "0" + seconds}.${ms}`;
   },
 
   millisecondsToTimeString(milliseconds) {
@@ -294,6 +293,15 @@ const util = {
 
   decodeBASE64(value) {
     return Buffer.from(value, "base64").toString();
+  },
+
+  isInDocker() {
+    try {
+      fs.statSync('/.dockerenv');
+      return true;
+    } catch (err) {
+      return false;
+    }
   },
 
   async fetchFileBASE64(url: string) {

@@ -2,6 +2,8 @@ import { PassThrough } from "stream";
 import _ from "lodash";
 import { JSDOM } from "jsdom";
 import axios, { AxiosResponse } from "axios";
+import puppeteer from "puppeteer-core";
+import type { Browser } from "puppeteer-core";
 
 import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
@@ -29,10 +31,104 @@ const FAKE_HEADERS = {
   "Sec-Fetch-Mode": "cors",
   "Sec-Fetch-Site": "same-origin",
   "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
 };
 // 是否启用Token交换
 let swapMode = false;
+
+let browser: Browser = null;
+
+async function requestStream(content: string, convId: string, token: string) {
+  if (!browser) {
+    browser = browser || await puppeteer.launch({
+      headless: true,
+      channel: util.isInDocker() ? undefined : "chrome",
+      executablePath: util.isInDocker() ? "/usr/bin/chromium" : undefined,
+      ignoreHTTPSErrors: true,
+      userDataDir: 'tmp/browser',
+      defaultViewport: null,
+      args: [
+        // 禁用沙箱
+        "--no-sandbox",
+        // 禁用UID沙箱
+        "--disable-setuid-sandbox",
+        // Windows下--single-process支持存在问题
+        util.isLinux() ? "--single-process" : "--process-per-tab",
+        // 如果共享内存/dev/shm比较小，可能导致浏览器无法启动，可以禁用它
+        "--disable-dev-shm-usage",
+        // 禁用扩展程序
+        "--disable-extensions",
+        // 隐藏滚动条
+        "--hide-scrollbars",
+        // 静音
+        "--mute-audio",
+        // 禁用GPU加速
+        "--disable-gpu",
+        "--disable-web-security"
+      ]
+    });
+  }
+  const page = await browser.newPage();
+  await page.setUserAgent(FAKE_HEADERS['User-Agent']);
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => false,
+    });
+    window.navigator.chrome = {
+      runtime: {}
+    };
+    delete navigator.__proto__.webdriver;
+  });
+  const [uid, sid] = token.split("-");
+  await page.setCacheEnabled(false);
+  await page.setCookie({
+    name: 'uid',
+    value: uid,
+    domain: ".metaso.cn"
+  }, {
+    name: 'sid',
+    value: sid,
+    domain: ".metaso.cn"
+  });
+  const client = await page.createCDPSession();
+  await client.send("Fetch.enable", {
+    patterns: [{
+      urlPattern: "https://metaso.cn/api/searchV2*",
+      requestStage: "Response"
+    }]
+  });
+  const stream = new PassThrough();
+  client.on("Fetch.requestPaused", async event => {
+    const { requestId } = event;
+    const result = await client.send("Fetch.takeResponseBodyAsStream", { requestId });
+    const streamHandle = result.stream;
+    if (!streamHandle)
+      return;
+    try {
+      while (true) {
+        const result = await client.send('IO.read', {
+          handle: streamHandle,
+          size: 256
+        })
+        if(!result)
+          break;
+        const { data, eof } = result;
+        data && stream.write(data);
+        if (eof)
+          break;
+      }
+    } catch(err) {
+      logger.error(err);
+      stream.end('data: [DONE]\n\n');
+    } finally {
+      stream.end();
+      await client.send('IO.close', { handle: streamHandle });
+      await page.close();
+    }
+  });
+  await page.goto(`https://metaso.cn/search/${convId}?q=${content}`);
+  return stream;
+}
 
 /**
  * 获取meta-token
@@ -170,37 +266,40 @@ async function createCompletion(
 
     // 创建会话
     const convId = await createConversation(content, _model, engineType, token);
+    
+    // 请求流
+    // const metaToken = await acquireMetaToken(token, swapMode);
+    // const result = await axios.get(`https://metaso.cn/api/searchV2`, {
+    //   params: {
+    //     sessionId: convId,
+    //     question: content,
+    //     lang: 'zh',
+    //     mode: _model,
+    //     url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
+    //     enableMix: 'true',
+    //     scholarSearchDomain: 'all',
+    //     expectedCurrentSessionSearchCount: '1',
+    //     'is-mini-webview': '0',
+    //     token: metaToken
+    //   },
+    //   headers: {
+    //     Cookie: generateCookie(token),
+    //     ...FAKE_HEADERS,
+    //     Accept: "text/event-stream",
+    //   },
+    //   // 300秒超时
+    //   timeout: 300000,
+    //   validateStatus: () => true,
+    //   responseType: "stream",
+    // }
+    // );
 
     // 请求流
-    const metaToken = await acquireMetaToken(token, swapMode);
-    const result = await axios.get(`https://metaso.cn/api/searchV2`, {
-      params: {
-        sessionId: convId,
-        question: content,
-        lang: 'zh',
-        mode: _model,
-        url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
-        enableMix: 'true',
-        scholarSearchDomain: 'all',
-        expectedCurrentSessionSearchCount: '1',
-        'is-mini-webview': '0',
-        token: metaToken
-      },
-      headers: {
-        Cookie: generateCookie(token),
-        ...FAKE_HEADERS,
-        Accept: "text/event-stream",
-      },
-      // 300秒超时
-      timeout: 300000,
-      validateStatus: () => true,
-      responseType: "stream",
-    }
-    );
+    const stream = await requestStream(content, convId, token);
 
     const streamStartTime = util.timestamp();
     // 接收流为输出文本
-    const answer = await receiveStream(model, convId, result.data);
+    const answer = await receiveStream(model, convId, stream);
     logger.success(
       `Stream has completed transfer ${util.timestamp() - streamStartTime}ms`
     );
@@ -253,35 +352,38 @@ async function createCompletionStream(
     // 创建会话
     const convId = await createConversation(content, _model, engineType, token);
 
+    // // 请求流
+    // const metaToken = await acquireMetaToken(token, swapMode);
+    // const result = await axios.get(`https://metaso.cn/api/searchV2`, {
+    //   params: {
+    //     sessionId: convId,
+    //     question: content,
+    //     lang: 'zh',
+    //     mode: _model,
+    //     url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
+    //     enableMix: 'true',
+    //     scholarSearchDomain: 'all',
+    //     expectedCurrentSessionSearchCount: '1',
+    //     'is-mini-webview': '0',
+    //     token: metaToken
+    //   },
+    //   headers: {
+    //     Cookie: generateCookie(token),
+    //     ...FAKE_HEADERS,
+    //     Accept: "text/event-stream",
+    //   },
+    //   // 300秒超时
+    //   timeout: 300000,
+    //   validateStatus: () => true,
+    //   responseType: "stream",
+    // }
+    // );
     // 请求流
-    const metaToken = await acquireMetaToken(token, swapMode);
-    const result = await axios.get(`https://metaso.cn/api/searchV2`, {
-      params: {
-        sessionId: convId,
-        question: content,
-        lang: 'zh',
-        mode: _model,
-        url: `https://metaso.cn/search/${convId}?newSearch=true&q=${content}`,
-        enableMix: 'true',
-        scholarSearchDomain: 'all',
-        expectedCurrentSessionSearchCount: '1',
-        'is-mini-webview': '0',
-        token: metaToken
-      },
-      headers: {
-        Cookie: generateCookie(token),
-        ...FAKE_HEADERS,
-        Accept: "text/event-stream",
-      },
-      // 300秒超时
-      timeout: 300000,
-      validateStatus: () => true,
-      responseType: "stream",
-    }
-    );
+    const stream = await requestStream(content, convId, token);
+
     const streamStartTime = util.timestamp();
     // 创建转换流将消息格式转换为gpt兼容格式
-    return createTransStream(model, convId, result.data, () => {
+    return createTransStream(model, convId, stream, () => {
       logger.success(
         `Stream has completed transfer ${util.timestamp() - streamStartTime}ms`
       );
@@ -413,7 +515,7 @@ async function receiveStream(model: string, convId: string, stream: any) {
         // 解析JSON
         const result = _.attempt(() => JSON.parse(event.data));
         if (_.isError(result)) {
-          if(event.data.indexOf('TOO_MANY_REQUESTS') != -1)
+          if (event.data.indexOf('TOO_MANY_REQUESTS') != -1)
             swapMode = !swapMode;
           throw new Error(`Stream response invalid: ${event.data}`);
         }
@@ -495,7 +597,7 @@ function createTransStream(
       // 解析JSON
       const result = _.attempt(() => JSON.parse(event.data));
       if (_.isError(result)) {
-        if(event.data.indexOf('TOO_MANY_REQUESTS') != -1)
+        if (event.data.indexOf('TOO_MANY_REQUESTS') != -1)
           swapMode = !swapMode;
         throw new Error(`Stream response invalid: ${event.data}`);
       }

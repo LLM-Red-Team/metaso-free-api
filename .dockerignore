@@ -1,6 +1,7 @@
 logs
 dist
 doc
+tmp
 node_modules
 .vscode
 .git
