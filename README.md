@@ -143,6 +143,25 @@ services:
       - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    command:
+      --cleanup
+      --interval 300
+      --label-enable
+      --label-file /watchtower_scope.yml
+      --notification bark
+      --bark-url "https://api.day.app/{your bark token}/metaso-image-just-updated"
+      -d "title=Notification&body=This is a notification from Watchtower."
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./watchtower_scope.yml:/watchtower_scope.yml
+    networks:
+      - my-custom-network
+networks:
+  my-custom-network:
+    driver: bridge
 ```
 
 ### Render部署
