@@ -419,6 +419,8 @@ function messagesPrepare(model: string, messages: any[], tempature: number) {
   let content = latestMessage.content;
   let engineType = "";
   ([model, engineType = ""] = model.split('-'));
+  if(content.indexOf('天气') != -1)
+    content += '，直接回答';
   // 如果模型名称未遵守预设则检查指令是否存在，如果都没有再以温度为准
   if (!["concise", "detail", "research", "concise"].includes(model)) {
     if (content.indexOf('简洁搜索') != -1) {
