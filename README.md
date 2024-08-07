@@ -143,6 +143,19 @@ services:
       - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
+    labels:
+      - vinlic.metaso.scope=metaso
+  
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    command: >
+      --cleanup
+      --scope metaso
+      --interval 300
+      --include-restarting
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 ```
 
 ### Render部署
