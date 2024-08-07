@@ -494,8 +494,11 @@ function createTransStream(
       }
       // 解析JSON
       const result = _.attempt(() => JSON.parse(event.data));
-      if (_.isError(result))
+      if (_.isError(result)) {
+        if(event.data.indexOf('TOO_MANY_REQUESTS') != -1)
+          swapMode = !swapMode;
         throw new Error(`Stream response invalid: ${event.data}`);
+      }
       if (result.type == "append-text") {
         const data = `data: ${JSON.stringify({
           id: convId,
