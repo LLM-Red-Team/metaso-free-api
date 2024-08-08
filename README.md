@@ -143,6 +143,20 @@ services:
       - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
+    labels:
+      - vinlic.scope.metaso=metaso
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    command:
+      --cleanup
+      --scope metaso
+      --interval 600
+      --include-restarting
+      --notification-url="bark://{填入bark的token}@api.day.app/{填入bark的token}/metaso-image-just-updated?title=Notification"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 ```
 
 ### Render部署
