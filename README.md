@@ -154,7 +154,8 @@ services:
       --scope metaso
       --interval 600
       --include-restarting
-      --notification-url="bark://{填入bark的token}@api.day.app/{填入bark的token}/metaso-image-just-updated?title=Notification"
+      # 可以配置通知地址，具体支持列表请查看：https://containrrr.dev/shoutrrr/v0.8/services/overview/
+      # --notification-url="bark://{填入bark的token}@api.day.app/{填入bark的token}/metaso-image-just-updated?title=Notification"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 ```
